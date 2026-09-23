@@ -1,0 +1,39 @@
+# ============================================================================
+# STAGE 1 — PostgreSQL for SecureBank (Week 3: SQL Kickoff + SQL Depth)
+# ============================================================================
+# Start the database:      docker compose up -d
+# Connect (psql inside the container — no local install needed):
+#   docker compose exec db psql -U securebank -d securebank
+# Run a teaching file:
+#   docker compose exec -T db psql -U securebank -d securebank < queries/02-joins.sql
+# Stop / RESET (init scripts only run on an EMPTY volume):
+#   docker compose down -v && docker compose up -d
+#
+# The container runs /docker-entrypoint-initdb.d/*.sql IN FILENAME ORDER on
+# first boot: 01-schema.sql creates the tables, 02-seed.sql fills demo data.
+# Stage 4 reuses this exact database for the full-stack docker-compose.
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: securebank-db
+    environment:
+      POSTGRES_DB: securebank          # database created on first boot
+      POSTGRES_USER: securebank        # login role (matches stage-2 postgres profile)
+      POSTGRES_PASSWORD: securebank    # DEV ONLY — never reuse this pattern in prod
+    ports:
+      - "5432:5432"                    # host:container — psql/DBeaver can reach it locally
+    volumes:
+      - pgdata:/var/lib/postgresql/data                      # data survives restarts
+      - ./schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ./seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      # Docker waits for this to pass before declaring the DB "healthy" —
+      # stage-4 compose uses depends_on: condition: service_healthy so the
+      # backend never starts before the database can actually answer.
+      test: ["CMD-SHELL", "pg_isready -U securebank -d securebank"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
