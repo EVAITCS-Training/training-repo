@@ -1,0 +1,103 @@
+# ============================================================================
+# STAGE 4 — THE FULL STACK IN ONE COMMAND (Week 8: Containers + DevOps)
+# ============================================================================
+#   docker compose up -d --build
+#
+#   frontend  http://localhost:8081   (nginx: SPA + /api proxy)
+#   backend   http://localhost:8080   (Spring Boot, postgres profile)
+#   db        localhost:5432          (PostgreSQL 17, stage-1 schema+seed)
+#   swagger   http://localhost:8081/swagger-ui.html  (proxied through nginx)
+#
+#   docker compose down        # stop          down -v   # stop + WIPE data
+#   docker compose logs -f backend             # watch the backend boot
+#
+# THE DEPENDENCY GRAPH (compose reads this from depends_on + healthchecks):
+#
+#   db ──healthy──> backend ──healthy──> frontend
+#   │ (pg_isready)  │ (/actuator/health)  │
+#   └─ init scripts └─ SPRING_PROFILES_ACTIVE=postgres
+#      mount stage-1      DB_HOST=db (Docker DNS service discovery)
+#      schema.sql + seed.sql
+#
+# WHY THIS MATTERS (lecture thread): "works on my machine" dies when the
+# machine IS the artifact. Every layer — OS packages, JVM, Node, nginx — is
+# versioned in files, and the SAME images run unchanged on any Docker host,
+# which is the on-ramp to the AWS/K8s deployment in infra/ (Weeks 8-9).
+# ============================================================================
+
+name: securebank-stack
+
+services:
+  # --------------------------------------------------------------------------
+  # PostgreSQL — the stage-1 database, verbatim. Init scripts run ONCE on an
+  # empty volume (filename order); to re-seed: docker compose down -v.
+  # --------------------------------------------------------------------------
+  db:
+    image: postgres:17-alpine
+    container_name: securebank-db
+    environment:
+      POSTGRES_DB: securebank
+      POSTGRES_USER: securebank
+      POSTGRES_PASSWORD: securebank        # DEV ONLY — secrets belong in a
+                                           # secrets manager in production
+    ports:
+      - "5432:5432"                        # exposed so psql/DBeaver work;
+                                           # production would NOT publish this
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ../stage-1-database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - ../stage-1-database/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U securebank -d securebank"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # --------------------------------------------------------------------------
+  # Backend — built from stage-2's Dockerfile (context = the stage-2 folder).
+  # The postgres profile switches the app from H2 to THIS db, and
+  # ddl-auto=validate makes Hibernate verify entities against stage-1's
+  # schema.sql at boot: the three stages are contract-checked against each
+  # other every single startup.
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ../stage-2-monolith
+    container_name: securebank-backend
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      # Spring reads ${DB_HOST} etc. from application.yml's postgres profile;
+      # "db" resolves via Docker's embedded DNS to the container above.
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_NAME: securebank
+      DB_USER: securebank
+      DB_PASSWORD: securebank
+      # 32+ bytes for HS256; injected as env — the image contains NO secrets
+      # (same image ships to prod, where the secret comes from the platform).
+      JWT_SECRET: compose-dev-secret-change-me-32bytes-minimum!!
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy         # <- wait for pg_isready, not just "started"
+
+  # --------------------------------------------------------------------------
+  # Frontend — nginx serving dist/ and proxying /api to the backend.
+  # The browser only ever talks to :8081; nginx does the rest.
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ../stage-3-frontend
+    container_name: securebank-frontend
+    ports:
+      - "8081:80"                          # 8081 so dev-mode vite (5173) and
+                                           # a locally-run backend (8080) can
+                                           # coexist with the stack
+    depends_on:
+      backend:
+        condition: service_healthy         # nginx proxy_pass needs backend DNS
+                                           # resolvable at startup
+
+volumes:
+  pgdata:

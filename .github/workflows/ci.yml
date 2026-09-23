@@ -1,0 +1,80 @@
+# ============================================================================
+# CI PIPELINE (Week 8-9: DevOps) — runs on every push / pull request.
+# ============================================================================
+# THE CONTRACT: main is always green. Three jobs, independent and parallel:
+#   backend  — compile + all 18 tests (unit, JPA slice, full HTTP integration)
+#   frontend — type-check (tsc), lint (oxlint), production build (vite)
+#   compose  — `docker compose config -q` validates the stage-4 stack wiring
+#              (YAML syntax, depends_on targets, volume paths) in seconds.
+#
+# WHY CACHE: setup-java/setup-node restore ~/.m2 and the npm cache keyed by
+# the lockfiles — first run downloads the world (~3 min), later runs reuse it
+# (~40 s). "Fast CI gets used; slow CI gets ignored" — the Flow principle.
+#
+# Stage 5 extends this file with a matrix job for the eight microservices
+# (see that commit) — same pattern, many directories.
+# ============================================================================
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs of the SAME branch (force-push friendly, saves minutes)
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend (stage-2) — test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: stage-2-monolith
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven                     # keyed off pom.xml automatically
+      # The mvnw wrapper pins the Maven version — CI needs no maven install.
+      # (-B batch mode: no interactive prompts, less log noise)
+      - name: Run tests
+        run: ./mvnw -B verify
+
+  frontend:
+    name: Frontend (stage-3) — typecheck, lint, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: stage-3-frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: stage-3-frontend/package-lock.json
+      - run: npm ci                        # exact locked dependency tree
+      - run: npm run lint                  # oxlint must stay clean
+      - run: npm run build                 # tsc -b && vite build
+      # Artifacts let you download the built dist/ from the Actions UI:
+      - uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: stage-3-frontend/dist
+
+  compose:
+    name: Stack (stage-4) — compose config
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate compose file
+        run: docker compose -f stage-4-docker-ci/docker-compose.yml config -q
+      # NOTE: we validate, we don't BUILD images here — image builds belong
+      # to a release pipeline (push to a registry on tags), not every PR.
+      # Week 9 discusses where that boundary sits for real teams.

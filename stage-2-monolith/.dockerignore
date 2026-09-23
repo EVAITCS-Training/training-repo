@@ -1,0 +1,10 @@
+# Build context noise — never send these to the Docker daemon (slows builds,
+# busts layer cache, and target/ can leak stale artifacts into COPY steps).
+target/
+.idea/
+*.iml
+.git/
+.gitignore
+README.md
+Dockerfile
+.dockerignore
