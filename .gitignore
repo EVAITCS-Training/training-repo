@@ -1,0 +1,43 @@
+# ============================================================================
+# Build output
+# ============================================================================
+target/
+build/
+out/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+
+# Node / frontend
+node_modules/
+dist/
+*.tsbuildinfo
+.vite/
+npm-debug.log*
+
+# Environment & secrets — NEVER commit these (Week 1 lesson)
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+application-local.yml
+
+# IDEs
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+# Logs & test output
+*.log
+logs/
+hs_err_pid*
+replay_pid*
+coverage/
