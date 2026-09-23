@@ -82,8 +82,8 @@ receipt. `docker compose down -v` wipes everything.
    nginx → gateway predicate → StripPrefix → Eureka lookup → service. Show
    that `/internal/**` has NO route (the perimeter).
 4. **The saga, happy path**: transfer in the UI; read payment-service logs
-   (debit → credit → COMPLETED → Kafka publish); see the `xfer-<id>` reference
-   in account-service's ledger rows via the statement screen.
+   (debit → credit → COMPLETED → Kafka publish); see the `xfer-<uuid>`
+   reference in account-service's ledger rows via the statement screen.
 5. **The saga, failure**: `docker compose stop account-service` mid-lecture,
    attempt a transfer → retries → circuit opens → 503 `Account service
    unavailable`; `GET :8083/actuator/health` shows the circuit state. Restart
