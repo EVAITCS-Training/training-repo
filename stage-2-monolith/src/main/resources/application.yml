@@ -1,0 +1,95 @@
+# ============================================================================
+# STAGE 2 CONFIGURATION — read this file top-to-bottom once; every block maps
+# to a layer you've seen in the code (datasource->repositories, jpa->entities,
+# app.jwt->security package, springdoc->OpenApiConfig).
+#
+# RUN MODES (profiles):
+#   default   -> H2 in-memory DB, zero setup:  .\mvnw.cmd spring-boot:run
+#                (schema auto-created from entities; DataSeeder fills demo data)
+#   postgres  -> the REAL database from stage-1:
+#                docker compose up -d   (in stage-1-database/)
+#                .\mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=postgres
+#   Stage 4 runs this app in a container with SPRING_PROFILES_ACTIVE=postgres.
+#
+# PRECEDENCE (Week 8 "12-factor config"): environment variables OVERRIDE
+# everything below (e.g. JWT_SECRET, DB_HOST) — that's how the same image
+# runs unchanged in dev/staging/prod with different settings.
+# ============================================================================
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: securebank-monolith
+
+  # --- DEFAULT PROFILE: H2 in-memory (dev + tests, no Docker needed) --------
+  datasource:
+    url: jdbc:h2:mem:securebank;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  h2:
+    console:
+      enabled: true          # browse the live DB at http://localhost:8080/h2-console
+      path: /h2-console      # (SecurityConfig permits it + allows same-origin frames)
+  jpa:
+    hibernate:
+      ddl-auto: create-drop  # DEV ONLY: build tables from @Entity classes, drop on exit.
+                             # Never do this against a real DB — stage-1 SQL owns that schema.
+    show-sql: true           # print every SQL statement — watch the lectures' queries happen
+    properties:
+      hibernate:
+        format_sql: true
+
+  mvc:
+    problemdetails:
+      enabled: true          # framework errors also come back as RFC 7807 problem+json
+                             # (pairs with GlobalExceptionHandler)
+
+# --- OUR application settings (bound by @ConfigurationProperties records) ---
+app:
+  jwt:
+    # DEV SECRET ONLY. Real deployments inject JWT_SECRET via the environment
+    # (docker-compose / Config Server / Secrets Manager) — never commit prod keys.
+    secret: ${JWT_SECRET:super-secret-dev-key-change-me-please-32bytes-min!}
+    issuer: securebank-monolith
+    ttl: PT1H                # ISO-8601 duration: tokens die after 1 hour
+
+# --- Actuator (Week 8: health probes for Docker/K8s) -------------------------
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      probes:
+        enabled: true        # /actuator/health/liveness + /readiness (Boot 4: on by default)
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+---
+# ============================================================================
+# PROFILE: postgres — points at the stage-1 database (docker compose).
+# Activated with: -Dspring-boot.run.profiles=postgres  or  SPRING_PROFILES_ACTIVE=postgres
+# ============================================================================
+spring:
+  config:
+    activate:
+      on-profile: postgres
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:securebank}
+    username: ${DB_USER:securebank}
+    password: ${DB_PASSWORD:securebank}
+  jpa:
+    hibernate:
+      # The schema is owned by stage-1-database/schema.sql (mounted into the
+      # postgres container). "validate" makes Hibernate CHECK entity<->table
+      # alignment at startup and fail fast on drift — schema-as-code discipline.
+      ddl-auto: validate
+    show-sql: false
+  h2:
+    console:
+      enabled: false
