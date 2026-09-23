@@ -1,0 +1,29 @@
+# ============================================================================
+# DISCOVERY SERVICE config — a Eureka SERVER doesn't register with itself.
+# ============================================================================
+server:
+  port: 8761                    # Eureka's conventional port
+
+eureka:
+  instance:
+    hostname: localhost
+  client:
+    register-with-eureka: false # I AM the registry — don't register with me
+    fetch-registry: false       # ...and don't cache a copy of myself either
+    service-url:
+      defaultZone: http://${eureka.instance.hostname}:${server.port}/eureka/
+      # defaultZone is what CLIENTS use (note: services point it at
+      # http://discovery-service:8761/eureka/ via config-repo/application.yml).
+      # The camelCase key is mandatory — it's a Map key, not a normal property.
+  server:
+    enable-self-preservation: false
+    # DEV ONLY (see class comment): without this, a laptop sleeping or a
+    # `docker compose stop` leaves ghost instances registered for ~15 minutes
+    # and lb:// calls hit dead endpoints. Production: KEEP SELF-PRESERVATION ON.
+    eviction-interval-timer-in-ms: 15000   # sweep expired leases every 15s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info

@@ -1,0 +1,12 @@
+# notification-service — environment config. No database: notifications are
+# kept in memory (a real system would persist them or hand them to email/SMS).
+spring:
+  kafka:
+    consumer:
+      group-id: notification-service    # consumer group = one delivery per group
+      auto-offset-reset: earliest       # a freshly started consumer still sees
+                                        # events published while it was down
+                                        # (Kafka retains them — that durability
+                                        #  is WHY we use a broker, not HTTP calls)
+    listener:
+      missing-topics-fatal: false       # boot even if Kafka/topics aren't up yet

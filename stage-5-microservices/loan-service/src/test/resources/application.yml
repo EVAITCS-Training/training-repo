@@ -1,0 +1,17 @@
+# Test overrides — no infrastructure (H2, no Eureka/Config/Kafka contact).
+# The loan test MOCKS the event publisher, so no broker is ever dialed.
+spring:
+  cloud:
+    config:
+      enabled: false
+  kafka:
+    bootstrap-servers: localhost:19092
+    admin:
+      fail-fast: false
+eureka:
+  client:
+    enabled: false
+
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-32bytes!

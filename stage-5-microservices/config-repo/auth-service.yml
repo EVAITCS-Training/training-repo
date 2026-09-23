@@ -1,0 +1,17 @@
+# auth-service — environment config (compose/cloud). Local dev defaults live
+# in auth-service/src/main/resources/application.yml; values HERE win.
+spring:
+  datasource:
+    # DATABASE PER SERVICE: auth-service owns authdb and nothing else touches
+    # it. One Postgres CONTAINER hosts four databases here to keep the demo
+    # light — in production each service gets its own instance/cluster
+    # (that isolation is the whole point; see stage README "What compose cheats on").
+    url: jdbc:postgresql://db:5432/authdb
+    username: securebank
+    password: securebank
+  jpa:
+    hibernate:
+      # Tables are created by Hibernate on first boot. Production answer:
+      # Flyway migrations per service (each service owns its schema history).
+      ddl-auto: update
+    show-sql: false

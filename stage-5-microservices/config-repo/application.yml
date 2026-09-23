@@ -1,0 +1,31 @@
+# ============================================================================
+# SHARED CONFIGURATION — served to EVERY service that imports the Config Server.
+# (config-server, discovery-service and the infra containers do NOT import it —
+#  they ARE the infrastructure; see the chicken-and-egg note in stage README.)
+# ============================================================================
+
+# --- Service discovery: where is Eureka? ------------------------------------
+eureka:
+  client:
+    enabled: true                       # overrides each service's local "false"
+    service-url:
+      defaultZone: http://discovery-service:8761/eureka/   # compose DNS name
+    healthcheck:
+      enabled: true                     # eureka health = actuator health
+  instance:
+    prefer-ip-address: true             # register the container IP, not hostname
+    lease-renewal-interval-in-seconds: 10   # heartbeat every 10s (Week 7 lesson)
+
+# --- Messaging: where is Kafka? ----------------------------------------------
+spring:
+  kafka:
+    bootstrap-servers: kafka:9092       # compose DNS name
+
+# --- Security: ONE signing secret shared by issuer + verifiers ----------------
+# DEV VALUE. In production this file lives in a private Git repo (or Vault)
+# and the secret is injected from a secrets manager — never in a public repo.
+app:
+  jwt:
+    secret: microservices-shared-dev-secret-at-least-32-bytes!
+    issuer: securebank-microservices
+    ttl: PT1H

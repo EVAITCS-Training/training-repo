@@ -1,0 +1,44 @@
+# ============================================================================
+# NOTIFICATION SERVICE — standalone defaults. Without Kafka it boots fine and
+# simply receives nothing (missing-topics-fatal=false); with the compose
+# stack it consumes "transfers" + "loans". No datasource at all — this
+# service owns no database (in-memory store).
+# ============================================================================
+server:
+  port: 8085
+
+spring:
+  application:
+    name: notification-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+  mvc:
+    problemdetails:
+      enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    consumer:
+      group-id: notification-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false   # boot without Kafka; catch up when it appears
+
+eureka:
+  client:
+    enabled: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:standalone-dev-secret-at-least-32-bytes-long!}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

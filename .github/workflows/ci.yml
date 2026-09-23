@@ -68,13 +68,46 @@ jobs:
           name: frontend-dist
           path: stage-3-frontend/dist
 
+  microservices:
+    name: Microservices (stage-5) — ${{ matrix.service }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false                     # one broken service must not hide the others
+      matrix:
+        service:
+          - discovery-service
+          - config-server
+          - api-gateway
+          - auth-service
+          - account-service
+          - payment-service
+          - loan-service
+          - notification-service
+    defaults:
+      run:
+        working-directory: stage-5-microservices/${{ matrix.service }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+      # Every service tests WITHOUT infrastructure (H2, Eureka off, Kafka
+      # mocked/disabled) — that self-containment is what makes this matrix
+      # fast and reliable. See stage-5 README "Tests".
+      - name: Run tests
+        run: ./mvnw -B verify
+
   compose:
-    name: Stack (stage-4) — compose config
+    name: Stacks (stage-4 + stage-5) — compose config
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Validate compose file
+      - name: Validate stage-4 compose file
         run: docker compose -f stage-4-docker-ci/docker-compose.yml config -q
+      - name: Validate stage-5 compose file
+        run: docker compose -f stage-5-microservices/docker-compose.yml config -q
       # NOTE: we validate, we don't BUILD images here — image builds belong
       # to a release pipeline (push to a registry on tags), not every PR.
       # Week 9 discusses where that boundary sits for real teams.

@@ -1,0 +1,33 @@
+# ============================================================================
+# CONFIG SERVER — native (filesystem) mode.
+# ============================================================================
+server:
+  port: 8888                     # the conventional config-server port; every
+                                 # service's spring.config.import points here
+
+spring:
+  application:
+    name: config-server
+  profiles:
+    active: native               # "native" = read from disk, NOT from Git.
+                                 # Production: drop this, set
+                                 # spring.cloud.config.server.git.uri instead.
+  cloud:
+    config:
+      server:
+        native:
+          # Where the YAML documents live. Locally: the sibling ../config-repo
+          # folder. In compose: CONFIG_REPO=/config-repo (a mounted volume) —
+          # same mechanism, environment-specific path via env var.
+          search-locations: file:${CONFIG_REPO:../config-repo}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+# TRY IT once running:
+#   curl http://localhost:8888/payment-service/default
+# -> JSON containing the merged application.yml + payment-service.yml.
+# That endpoint IS the whole Config Server protocol.

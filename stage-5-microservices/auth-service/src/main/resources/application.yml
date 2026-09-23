@@ -1,0 +1,51 @@
+# ============================================================================
+# AUTH SERVICE — standalone defaults. In compose, config-repo overrides the
+# datasource (Postgres authdb) and enables Eureka; nothing else changes.
+# ============================================================================
+server:
+  port: 8081
+
+spring:
+  application:
+    name: auth-service          # <- selects config-repo/auth-service.yml AND
+                                #    the name this service registers under in Eureka
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+
+  # Default: H2 in-memory so the service runs with zero infrastructure.
+  datasource:
+    url: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop     # dev-only; compose gets "update" from config-repo
+    show-sql: false
+
+  mvc:
+    problemdetails:
+      enabled: true             # validation errors -> RFC 7807 problem+json
+
+# Discovery OFF locally (no Eureka running on a bare laptop); config-repo
+# turns it ON in the stack.
+eureka:
+  client:
+    enabled: false
+
+# Local dev fallback — config-repo/application.yml provides the REAL shared
+# values in the stack. Same property names, layered sources: that's 12-factor.
+app:
+  jwt:
+    secret: ${JWT_SECRET:standalone-dev-secret-at-least-32-bytes-long!}
+    issuer: securebank-microservices
+    ttl: PT1H
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true

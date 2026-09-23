@@ -1,0 +1,91 @@
+# ============================================================================
+# PAYMENT SERVICE — standalone defaults (H2, no Eureka/Kafka needed to boot).
+# Config Server overrides datasource + eureka + kafka + resilience tuning in
+# the stack (config-repo/payment-service.yml).
+#
+# NOTE on standalone mode: with eureka.client.enabled=false the load-balanced
+# RestClient cannot resolve "account-service", so POST /transfers will fail
+# with AccountServiceUnavailable — BY DESIGN. The saga needs its dependency;
+# run the compose stack (or at least discovery + account-service) to see it
+# work. That friction is microservices telling you the truth about coupling.
+# ============================================================================
+server:
+  port: 8083
+
+spring:
+  application:
+    name: payment-service
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+  datasource:
+    url: jdbc:h2:mem:paymentdb;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  mvc:
+    problemdetails:
+      enabled: true
+  kafka:
+    bootstrap-servers: ${KAFKA_SERVERS:localhost:9092}
+    producer:
+      # String ser/deser on purpose: events are hand-serialized JSON strings
+      # (TransferEventPublisher) — no type-header magic, maximum transparency.
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+eureka:
+  client:
+    enabled: false
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:standalone-dev-secret-at-least-32-bytes-long!}
+
+# ----------------------------------------------------------------------------
+# RESILIENCE4J — local defaults mirror config-repo/payment-service.yml.
+# The ignore-exceptions lists are the crucial bit: BUSINESS refusals
+# (InsufficientFundsException) must NOT count as circuit failures (the
+# dependency is healthy, it just said no) and must NOT be retried (retrying
+# "no money" is pointless and spams the ledger).
+# ----------------------------------------------------------------------------
+resilience4j:
+  circuitbreaker:
+    instances:
+      account-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 3
+        ignore-exceptions:
+          - com.evaitcs.securebank.payment.client.InsufficientFundsException
+  retry:
+    instances:
+      account-service:
+        max-attempts: 3
+        wait-duration: 500ms
+        ignore-exceptions:
+          - com.evaitcs.securebank.payment.client.InsufficientFundsException
+  timelimiter:
+    instances:
+      account-service:
+        timeout-duration: 5s     # default 1s is too tight for demos + retries
+spring.cloud.circuitbreaker.resilience4j.disable-time-limiter: true
+# ^ the Spring Cloud abstraction wraps @CircuitBreaker methods in a 1s
+#   TimeLimiter by default; with @Retry(3x500ms) inside, that would abort
+#   legitimate retry sequences. Disabling it hands timing back to the retry
+#   config above. (A subtle Boot/Cloud interaction worth 10 minutes of class
+#   time — everyone hits it once.)
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,circuitbreakers   # /actuator/circuitbreakers shows CB states
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always     # see the circuit breaker in the health payload

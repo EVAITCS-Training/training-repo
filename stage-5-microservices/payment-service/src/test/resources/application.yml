@@ -1,0 +1,18 @@
+# Test overrides — no infrastructure: H2, no Eureka, no Config Server.
+# Kafka: the saga test MOCKS the publisher, so no broker is contacted;
+# bootstrap-servers stays pointed at a placeholder that is never dialed.
+spring:
+  cloud:
+    config:
+      enabled: false
+  kafka:
+    bootstrap-servers: localhost:19092   # unused by mocked tests; keeps autoconfig happy
+    listener:
+      missing-topics-fatal: false
+eureka:
+  client:
+    enabled: false
+
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-32bytes!

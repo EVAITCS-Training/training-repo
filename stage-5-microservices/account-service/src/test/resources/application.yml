@@ -1,0 +1,14 @@
+# Test overrides — services must test WITHOUT infrastructure (no Eureka, no
+# Config Server, no Kafka, no Postgres). Everything falls back to H2 + local
+# values; this file pins the JWT secret TestTokens signs with.
+spring:
+  cloud:
+    config:
+      enabled: false        # don't even try the config server in tests
+eureka:
+  client:
+    enabled: false
+
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-32bytes!

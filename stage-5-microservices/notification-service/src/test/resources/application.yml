@@ -1,0 +1,18 @@
+# Test overrides — listener tests call the @KafkaListener methods DIRECTLY,
+# so the container must not try to reach a broker: auto-startup off.
+spring:
+  cloud:
+    config:
+      enabled: false
+  kafka:
+    bootstrap-servers: localhost:19092
+    listener:
+      auto-startup: false       # <- no consumer threads in tests
+      missing-topics-fatal: false
+eureka:
+  client:
+    enabled: false
+
+app:
+  jwt:
+    secret: test-secret-test-secret-test-secret-32bytes!

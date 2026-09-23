@@ -1,0 +1,50 @@
+# ============================================================================
+# api-gateway — THE ROUTE TABLE (environment version).
+# ============================================================================
+# Compare with api-gateway/src/main/resources/application.yml (the standalone
+# version with http://localhost:PORT uris): SAME routes, but here every uri is
+# lb://SERVICE-NAME — Spring Cloud LoadBalancer resolves the name to a healthy
+# instance through Eureka at REQUEST time. Scale account-service to 3 replicas
+# and the gateway round-robins between them with no config change.
+#
+# Request anatomy (frontend unchanged from stage 3!):
+#   browser -> nginx /api/transfers -> gateway :8080
+#   gateway matches Path=/api/transfers/** -> StripPrefix=1 -> lb://payment-service
+#   payment-service receives POST /transfers
+#
+# WHAT IS *NOT* HERE: no route for /internal/** — those endpoints exist on
+# account-service for payment-service only. The gateway not routing them IS
+# the perimeter (plus network policies in k8s; see infra/).
+# ============================================================================
+spring:
+  cloud:
+    gateway:
+      server:
+        webmvc:                          # MVC gateway namespace (Cloud 2025.1+)
+          routes:
+            - id: auth
+              uri: lb://auth-service
+              predicates: [Path=/api/auth/**]
+              filters: [StripPrefix=1]
+            - id: accounts
+              uri: lb://account-service
+              # ONE Path predicate with comma-separated patterns (OR inside the
+              # predicate). Two separate Path= predicates are ANDed — impossible
+              # to match. AND the whole string must be QUOTED: in YAML flow
+              # lists [a,b] the comma separates items, so without quotes this
+              # becomes two broken predicates. (Both bugs were hit for real
+              # while building this repo — YAML teaches humility.)
+              predicates: ["Path=/api/accounts/**,/api/customers/**"]
+              filters: [StripPrefix=1]
+            - id: payments
+              uri: lb://payment-service
+              predicates: [Path=/api/transfers/**]
+              filters: [StripPrefix=1]
+            - id: loans
+              uri: lb://loan-service
+              predicates: [Path=/api/loans/**]
+              filters: [StripPrefix=1]
+            - id: notifications
+              uri: lb://notification-service
+              predicates: [Path=/api/notifications/**]
+              filters: [StripPrefix=1]

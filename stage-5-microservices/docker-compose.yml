@@ -1,0 +1,188 @@
+# ============================================================================
+# STAGE 5 — THE FULL MICROSERVICES STACK (Weeks 7-9)
+# ============================================================================
+#   docker compose up -d --build     (first build: several minutes; boot: ~2-3 min)
+#
+#   frontend   http://localhost:8090   (stage-3 SPA, UNCHANGED — nginx proxies
+#                                       /api to the gateway via the "backend"
+#                                       network alias below)
+#   gateway    http://localhost:8080   (single entry point; /actuator/gateway/routes)
+#   eureka     http://localhost:8761   (registry dashboard — watch services appear)
+#   config     http://localhost:8888   (try /payment-service/default)
+#   services   :8081-:8085            (auth, account, payment, loan, notification)
+#
+#   docker compose down               (add -v to wipe databases)
+#   docker compose logs -f payment-service
+#
+# WATCH THE EVENT PIPELINE (Kafka has no host port on purpose — go inside):
+#   docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+#     --bootstrap-server localhost:9092 --topic transfers --from-beginning
+# ...then do a transfer in the UI and see TransferCompleted land, followed by
+# the receipt in http://localhost:8090 (loans/notifications via gateway:
+# GET http://localhost:8080/api/notifications with a Bearer token).
+#
+# STARTUP CHOREOGRAPHY (depends_on + healthchecks):
+#   db ────────┐ (healthy: pg_isready)
+#   kafka ─────┤ (healthy: broker API responds)
+#   config ────┼─> auth, account, payment, loan, notification ─> gateway ─> frontend
+#   discovery ─┘        (each healthy = actuator health incl. Eureka)
+#
+# THE FRONTEND TRICK: nginx.conf proxies to http://backend:8080. We give the
+# GATEWAY the network alias "backend", so the stage-3 image drops into this
+# radically different topology with ZERO code changes. Contracts, not
+# implementations — the whole decomposition thesis in one YAML key.
+# ============================================================================
+
+name: securebank-microservices
+
+services:
+  # ---------------- infrastructure ----------------
+  db:
+    image: postgres:17-alpine
+    container_name: sb5-db
+    environment:
+      POSTGRES_USER: securebank
+      POSTGRES_PASSWORD: securebank
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"          # close stage-1/4 stacks first if they hold 5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db-init/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    healthcheck:
+      # -d postgres is REQUIRED here: pg_isready without -d connects to a
+      # database named after the USER ("securebank"), which does not exist in
+      # this stack (the four service databases are created by the init script).
+      # The probe still passes (server accepts connections) but logs a FATAL
+      # every interval — noisy and alarming. Name the database explicitly.
+      test: ["CMD-SHELL", "pg_isready -U securebank -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  kafka:
+    image: apache/kafka:4.0.0        # KRaft mode — Kafka 4 has no ZooKeeper at all
+    container_name: sb5-kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092   # reachable by SERVICE NAME
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1            # single-node demo values
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 >/dev/null 2>&1 || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 30s
+
+  config-server:
+    build: ./config-server
+    container_name: sb5-config-server
+    environment:
+      CONFIG_REPO: /config-repo       # native (filesystem) backend, see its yml
+    volumes:
+      - ./config-repo:/config-repo:ro # EDIT a yml here + restart a service = new config
+    ports:
+      - "8888:8888"
+
+  discovery-service:
+    build: ./discovery-service
+    container_name: sb5-discovery
+    ports:
+      - "8761:8761"
+
+  # ---------------- business services ----------------
+  auth-service:
+    build: ./auth-service
+    container_name: sb5-auth
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports: ["8081:8081"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      db: { condition: service_healthy }
+      discovery-service: { condition: service_started }
+
+  account-service:
+    build: ./account-service
+    container_name: sb5-account
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports: ["8082:8082"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      db: { condition: service_healthy }
+      discovery-service: { condition: service_started }
+
+  payment-service:
+    build: ./payment-service
+    container_name: sb5-payment
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports: ["8083:8083"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      db: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      discovery-service: { condition: service_started }
+
+  loan-service:
+    build: ./loan-service
+    container_name: sb5-loan
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports: ["8084:8084"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      db: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      discovery-service: { condition: service_started }
+
+  notification-service:
+    build: ./notification-service
+    container_name: sb5-notification
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports: ["8085:8085"]
+    depends_on:
+      config-server: { condition: service_healthy }
+      kafka: { condition: service_healthy }
+      discovery-service: { condition: service_started }
+
+  # ---------------- edge ----------------
+  api-gateway:
+    build: ./api-gateway
+    container_name: sb5-gateway
+    environment:
+      CONFIG_SERVER_URL: http://config-server:8888
+    ports:
+      - "8080:8080"
+    networks:
+      default:
+        aliases:
+          - backend          # <- the frontend's nginx.conf finds the gateway
+    depends_on:
+      config-server: { condition: service_healthy }
+      discovery-service: { condition: service_started }
+      auth-service: { condition: service_healthy }
+      account-service: { condition: service_healthy }
+      payment-service: { condition: service_healthy }
+      loan-service: { condition: service_healthy }
+
+  frontend:
+    build: ../stage-3-frontend       # the SAME image as stage 4 — unchanged app
+    container_name: sb5-frontend
+    ports:
+      - "8090:80"
+    depends_on:
+      api-gateway: { condition: service_healthy }
+
+volumes:
+  pgdata:

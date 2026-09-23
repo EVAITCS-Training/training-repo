@@ -1,0 +1,10 @@
+# loan-service — environment config.
+spring:
+  datasource:
+    url: jdbc:postgresql://db:5432/loandb
+    username: securebank
+    password: securebank
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false

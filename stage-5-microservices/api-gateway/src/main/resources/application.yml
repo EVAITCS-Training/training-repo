@@ -1,0 +1,57 @@
+# ============================================================================
+# API GATEWAY — standalone defaults (running services on localhost by hand).
+# In compose, config-repo/api-gateway.yml REPLACES these routes with lb://
+# discovery uris — same paths, same StripPrefix, different resolution.
+# ============================================================================
+server:
+  port: 8080                      # the SAME port the stage-2 monolith used —
+                                  # the frontend/nginx config never changes
+
+spring:
+  application:
+    name: api-gateway             # <- key for config-repo/api-gateway.yml
+  config:
+    import: optional:configserver:${CONFIG_SERVER_URL:http://localhost:8888}
+    # optional: boot even when the config server is down (standalone demos)
+
+  cloud:
+    gateway:
+      server:
+        webmvc:
+          routes:
+            # StripPrefix=1 removes the FIRST path segment (/api) before
+            # forwarding: /api/transfers -> payment-service receives /transfers.
+            # Services therefore serve WITHOUT the /api prefix; the prefix is
+            # purely the gateway's public namespace.
+            - id: auth
+              uri: http://localhost:8081
+              predicates: [Path=/api/auth/**]
+              filters: [StripPrefix=1]
+            - id: accounts
+              uri: http://localhost:8082
+              predicates: ["Path=/api/accounts/**,/api/customers/**"]  # quoted: the comma
+              filters: [StripPrefix=1]                                 # belongs to ONE Path predicate
+            - id: payments
+              uri: http://localhost:8083
+              predicates: [Path=/api/transfers/**]
+              filters: [StripPrefix=1]
+            - id: loans
+              uri: http://localhost:8084
+              predicates: [Path=/api/loans/**]
+              filters: [StripPrefix=1]
+            - id: notifications
+              uri: http://localhost:8085
+              predicates: [Path=/api/notifications/**]
+              filters: [StripPrefix=1]
+
+# Discovery OFF by default: standalone mode routes to fixed localhost ports.
+# config-repo/application.yml turns it ON (and lb:// routes then resolve).
+eureka:
+  client:
+    enabled: false
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway   # /actuator/gateway/routes shows the LIVE route table
