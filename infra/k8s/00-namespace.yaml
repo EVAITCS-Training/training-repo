@@ -1,0 +1,14 @@
+# ============================================================================
+# NAMESPACE — the cluster-level "folder" for SecureBank.
+# ============================================================================
+# Namespaces give: name isolation (two teams can both have "auth-service"),
+# RBAC scoping, ResourceQuota/LimitRange application points, and NetworkPolicy
+# default-deny boundaries. One namespace per product/team is the common start;
+# per-environment namespaces (securebank-dev/-staging/-prod) or per-env
+# CLUSTERS come later (Week 9 hardening discussion).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: securebank
+  labels:
+    app.kubernetes.io/part-of: securebank

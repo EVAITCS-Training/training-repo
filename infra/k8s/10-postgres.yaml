@@ -1,0 +1,100 @@
+# ============================================================================
+# POSTGRES IN K8s — the honest teaching version.
+# ============================================================================
+# THE LECTURE FIRST: running your own database in Kubernetes is usually the
+# WRONG answer in production. Stateful workloads need backups, failover,
+# patching, point-in-time recovery — all things managed services (AWS RDS,
+# Cloud SQL, Azure Flexible Server) do better than you will at 2am. The
+# terraform/ folder in this repo provisions RDS for exactly that reason.
+#
+# This manifest exists so students can SEE what "self-hosted state" costs:
+# a StatefulSet (stable identity), a PersistentVolumeClaim (storage that
+# outlives Pods), and a Secret (credentials). Compare its length to the
+# one-line `image: postgres:17-alpine` in compose.
+# ============================================================================
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-credentials
+  namespace: securebank
+type: Opaque
+stringData:
+  # DEV VALUES. Production: sealed secrets / external-secrets-operator /
+  # cloud secret stores — NEVER plaintext in git (Week 1 .gitignore lesson
+  # grown up).
+  username: securebank
+  password: securebank
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: securebank
+spec:
+  selector:
+    app: postgres
+  ports:
+    - port: 5432        # cluster-internal DNS: db.securebank.svc.cluster.local
+      targetPort: 5432
+  # No NodePort/LoadBalancer: the database is NOT reachable from outside the
+  # cluster. Services reach it by in-cluster DNS only.
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: securebank
+spec:
+  serviceName: db       # stable network identity per replica
+  replicas: 1           # multi-replica Postgres needs an operator (Patroni etc.)
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef: { name: postgres-credentials, key: username }
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: postgres-credentials, key: password }
+            - name: POSTGRES_DB
+              value: postgres
+          # READINESS vs LIVENESS (the probe pair everyone confuses):
+          #  readiness = "can take traffic now?"  -> removed from Service endpoints when failing
+          #  liveness  = "stuck forever?"          -> container RESTARTED when failing
+          # A slow database should fail READINESS (stop sending queries),
+          # not LIVENESS (restarting a slow db makes it slower — death spiral).
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "securebank", "-d", "postgres"]
+            initialDelaySeconds: 5
+            periodSeconds: 5
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "securebank", "-d", "postgres"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 250m, memory: 256Mi }   # scheduling guarantee
+            limits:   { cpu: "1",  memory: 1Gi }     # hard ceiling (OOMKill at limit)
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:          # one PVC per replica, survives Pod deletion
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 5Gi

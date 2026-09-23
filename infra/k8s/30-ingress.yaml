@@ -1,0 +1,36 @@
+# ============================================================================
+# INGRESS — the cluster's single public door (compose's nginx, promoted).
+# ============================================================================
+# Everything external enters HERE: TLS terminates at the ingress controller,
+# then traffic flows to the api-gateway Service, which routes to services.
+# Two routing layers may look redundant — they're not:
+#   Ingress = edge concerns (TLS certs, host rules, rate limits, WAF hooks)
+#   Gateway = app concerns  (per-route predicates, filters, lb:// targets)
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: securebank
+  namespace: securebank
+  annotations:
+    # Annotations are controller-specific (nginx-ingress shown; AWS ALB
+    # controller uses different ones — same concept, different dialect).
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"   # HTTP -> HTTPS always
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"  # reject huge uploads early
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [securebank.example.com]
+      secretName: securebank-tls   # cert materialized by cert-manager (or cloud ACM)
+  rules:
+    - host: securebank.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway      # NOT the business services directly:
+                port: { number: 8080 } # the gateway remains the only route in
+          # Frontend static assets would get their own host/path rule (or a
+          # CDN in front); omitted to keep the edge story focused.

@@ -1,0 +1,75 @@
+# ============================================================================
+# NETWORK POLICIES — closing the /internal/** gap PROPERLY (Week 9 hardening).
+# ============================================================================
+# In stage 5 the internal saga endpoints were protected by "the gateway has
+# no route for them". That's perimeter-by-omission: anything inside the
+# network (a compromised Pod, a debug shell) could call them directly.
+# NetworkPolicies make the rule EXPLICIT and enforced by the CNI:
+#
+#   default-deny ingress for the namespace, then allow ONLY:
+#     - anyone      -> api-gateway:8080            (the public surface)
+#     - api-gateway -> each public service port    (routed traffic)
+#     - payment     -> account-service:8082        (the saga's internal calls)
+#     - probes/DNS  -> as needed
+#
+# Requires a CNI that enforces policies (Calico, Cilium, ...). Without one,
+# these objects are accepted and ignored — verify your cluster first.
+# ============================================================================
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: securebank
+spec:
+  podSelector: {}          # every Pod in the namespace
+  policyTypes: [Ingress]   # nothing may receive traffic unless allowed below
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-gateway-in
+  namespace: securebank
+spec:
+  podSelector:
+    matchLabels: { app: api-gateway }
+  policyTypes: [Ingress]
+  ingress:
+    - from:                # ingress controller Pods (label per your CNI/ingress)
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } }
+      ports: [{ port: 8080 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-routed-services
+  namespace: securebank
+spec:
+  podSelector:
+    matchExpressions:
+      - { key: app, operator: In, values: [auth-service, account-service, loan-service, notification-service] }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: api-gateway } }
+      ports: [{ port: 8081 }, { port: 8082 }, { port: 8084 }, { port: 8085 }]
+---
+# THE MONEY RULE: only payment-service may touch account-service, and it may
+# use the internal surface. (Public account endpoints come via the gateway
+# rule above; this adds the service-to-service leg the saga needs.)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: payment-to-account-internal
+  namespace: securebank
+spec:
+  podSelector: { matchLabels: { app: account-service } }
+  policyTypes: [Ingress]
+  ingress:
+    - from:
+        - podSelector: { matchLabels: { app: payment-service } }
+      ports: [{ port: 8082 }]
+---
+# Services need egress to: DNS, the database, Kafka, config/discovery, and
+# each other per the rules above. A matching egress deny-set would complete
+# the picture (left as an exercise — egress policies bite CI runners and
+# image pulls if written carelessly).

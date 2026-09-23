@@ -1,0 +1,41 @@
+# ============================================================================
+# HORIZONTAL POD AUTOSCALER — "scale up" as a declarative policy.
+# ============================================================================
+# compose's `--scale` needed manual action AND broke fixed host ports. Here
+# the control loop watches metrics and adjusts replicas between min and max:
+# load rises -> Pods appear (readiness-gated into the Service) -> load falls
+# -> Pods drain and disappear. This is elastic capacity, the cloud's core
+# promise (Week 8 AWS / Week 9 system design: "design for scale-out").
+#
+# Prereqs: metrics-server in the cluster (for cpu/memory metrics); for custom
+# metrics (Kafka lag!) you'd add Prometheus + the custom-metrics adapter —
+# scaling consumers on LAG is the real-world pattern for notification-service.
+# ============================================================================
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: account-service
+  namespace: securebank
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: account-service
+  minReplicas: 2                 # never below HA floor
+  maxReplicas: 8                 # cost + downstream (DB connections!) ceiling
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70   # headroom BEFORE saturation; tune per service
+  behavior:                      # the part everyone forgets: HOW fast to move
+    scaleUp:
+      stabilizationWindowSeconds: 30   # don't chase 10s spikes
+      policies:
+        - { type: Percent, value: 100, periodSeconds: 60 }  # at most double/min
+    scaleDown:
+      stabilizationWindowSeconds: 300  # flapping down/up is worse than idle Pods
+      policies:
+        - { type: Pods, value: 1, periodSeconds: 120 }      # shed gently

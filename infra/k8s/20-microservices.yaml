@@ -1,0 +1,277 @@
+# ============================================================================
+# THE EIGHT SERVICES AS DEPLOYMENTS + SERVICES
+# ============================================================================
+# compose -> k8s translation, side by side (first entry annotated in depth,
+# the rest follow the identical shape):
+#
+#   compose service          Deployment (replicas, image, env, probes)
+#   container_name           Pod labels (identity comes from LABELS, not names)
+#   ports: "8081:8081"       Service (cluster DNS) — NO host ports at all;
+#                            external entry is the Ingress in 30-ingress.yaml
+#   depends_on: healthy      readinessProbe (traffic) + rollout ordering
+#   environment:             env / envFrom ConfigMap+Secret
+#   healthcheck              readiness + liveness probes
+#
+# IMAGES: placeholders for YOUR registry (ghcr.io/..., ECR, ...). Compose
+# built images locally; clusters pull from registries — that handoff is the
+# release pipeline's job (Week 9).
+# ============================================================================
+
+# ---------------------------------------------------------------- auth-service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: auth-service
+  namespace: securebank
+spec:
+  replicas: 2                # stateless => trivially replicable (unlike Postgres)
+  selector:
+    matchLabels: { app: auth-service }
+  template:
+    metadata:
+      labels: { app: auth-service }
+    spec:
+      containers:
+        - name: auth-service
+          image: registry.example.com/securebank/auth-service:latest
+          ports: [{ containerPort: 8081 }]
+          env:
+            # Shared, non-secret config -> ConfigMap (the k8s twin of the
+            # Config Server; many estates run BOTH: ConfigMap for platform
+            # values, Spring Config Server for app values).
+            - name: CONFIG_SERVER_URL
+              value: http://config-server:8888
+            # Secrets NEVER in the manifest: referenced from a Secret object
+            # created by your secret pipeline (sealed-secrets, ESO, ...).
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef: { name: jwt-secret, key: secret }
+          # readiness: OUT of load balancing when failing (rolling updates
+          # wait for this before killing the old Pod — zero-downtime deploys).
+          readinessProbe:
+            httpGet: { path: /actuator/health/readiness, port: 8081 }
+            initialDelaySeconds: 20
+            periodSeconds: 5
+          # liveness: RESTART when deadlocked; keep thresholds generous or
+          # GC pauses cause restart loops.
+          livenessProbe:
+            httpGet: { path: /actuator/health/liveness, port: 8081 }
+            initialDelaySeconds: 40
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 200m, memory: 384Mi }
+            limits:   { cpu: "1",  memory: 640Mi }
+          # graceful shutdown: SIGTERM -> Spring stops accepting, drains
+          # in-flight requests (server.shutdown=graceful), then exits.
+          lifecycle:
+            preStop:
+              exec: { command: ["sh", "-c", "sleep 5"] }  # let endpoints de-register first
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: auth-service
+  namespace: securebank
+spec:
+  selector: { app: auth-service }
+  ports: [{ port: 8081, targetPort: 8081 }]
+  # ClusterIP (default): reachable as auth-service.securebank.svc only.
+  # This Service DNS is what makes Eureka OPTIONAL on k8s (see README table).
+
+# ------------------------------------------------------------- account-service
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: account-service, namespace: securebank }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: account-service } }
+  template:
+    metadata: { labels: { app: account-service } }
+    spec:
+      containers:
+        - name: account-service
+          image: registry.example.com/securebank/account-service:latest
+          ports: [{ containerPort: 8082 }]
+          env:
+            - { name: CONFIG_SERVER_URL, value: "http://config-server:8888" }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: jwt-secret, key: secret } }
+          readinessProbe: { httpGet: { path: /actuator/health/readiness, port: 8082 }, initialDelaySeconds: 20, periodSeconds: 5 }
+          livenessProbe:  { httpGet: { path: /actuator/health/liveness,  port: 8082 }, initialDelaySeconds: 40, periodSeconds: 10 }
+          resources: { requests: { cpu: 200m, memory: 384Mi }, limits: { cpu: "1", memory: 640Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: account-service, namespace: securebank }
+spec:
+  selector: { app: account-service }
+  ports: [{ port: 8082, targetPort: 8082 }]
+
+# ------------------------------------------------------------- payment-service
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: payment-service, namespace: securebank }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: payment-service } }
+  template:
+    metadata: { labels: { app: payment-service } }
+    spec:
+      containers:
+        - name: payment-service
+          image: registry.example.com/securebank/payment-service:latest
+          ports: [{ containerPort: 8083 }]
+          env:
+            - { name: CONFIG_SERVER_URL, value: "http://config-server:8888" }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: jwt-secret, key: secret } }
+          readinessProbe: { httpGet: { path: /actuator/health/readiness, port: 8083 }, initialDelaySeconds: 20, periodSeconds: 5 }
+          livenessProbe:  { httpGet: { path: /actuator/health/liveness,  port: 8083 }, initialDelaySeconds: 40, periodSeconds: 10 }
+          resources: { requests: { cpu: 200m, memory: 384Mi }, limits: { cpu: "1", memory: 640Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: payment-service, namespace: securebank }
+spec:
+  selector: { app: payment-service }
+  ports: [{ port: 8083, targetPort: 8083 }]
+
+# ---------------------------------------------------------------- loan-service
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: loan-service, namespace: securebank }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: loan-service } }
+  template:
+    metadata: { labels: { app: loan-service } }
+    spec:
+      containers:
+        - name: loan-service
+          image: registry.example.com/securebank/loan-service:latest
+          ports: [{ containerPort: 8084 }]
+          env:
+            - { name: CONFIG_SERVER_URL, value: "http://config-server:8888" }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: jwt-secret, key: secret } }
+          readinessProbe: { httpGet: { path: /actuator/health/readiness, port: 8084 }, initialDelaySeconds: 20, periodSeconds: 5 }
+          livenessProbe:  { httpGet: { path: /actuator/health/liveness,  port: 8084 }, initialDelaySeconds: 40, periodSeconds: 10 }
+          resources: { requests: { cpu: 200m, memory: 384Mi }, limits: { cpu: "1", memory: 640Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: loan-service, namespace: securebank }
+spec:
+  selector: { app: loan-service }
+  ports: [{ port: 8084, targetPort: 8084 }]
+
+# -------------------------------------------------------- notification-service
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: notification-service, namespace: securebank }
+spec:
+  replicas: 2   # Kafka consumer group rebalances partitions across replicas —
+                # scale = parallelism, for free (Week 7 messaging payoff)
+  selector: { matchLabels: { app: notification-service } }
+  template:
+    metadata: { labels: { app: notification-service } }
+    spec:
+      containers:
+        - name: notification-service
+          image: registry.example.com/securebank/notification-service:latest
+          ports: [{ containerPort: 8085 }]
+          env:
+            - { name: CONFIG_SERVER_URL, value: "http://config-server:8888" }
+            - name: JWT_SECRET
+              valueFrom: { secretKeyRef: { name: jwt-secret, key: secret } }
+          readinessProbe: { httpGet: { path: /actuator/health/readiness, port: 8085 }, initialDelaySeconds: 20, periodSeconds: 5 }
+          livenessProbe:  { httpGet: { path: /actuator/health/liveness,  port: 8085 }, initialDelaySeconds: 40, periodSeconds: 10 }
+          resources: { requests: { cpu: 100m, memory: 256Mi }, limits: { cpu: 500m, memory: 512Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: notification-service, namespace: securebank }
+spec:
+  selector: { app: notification-service }
+  ports: [{ port: 8085, targetPort: 8085 }]
+
+# ----------------------------------------------------------------- api-gateway
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: api-gateway, namespace: securebank }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: api-gateway } }
+  template:
+    metadata: { labels: { app: api-gateway } }
+    spec:
+      containers:
+        - name: api-gateway
+          image: registry.example.com/securebank/api-gateway:latest
+          ports: [{ containerPort: 8080 }]
+          env:
+            - { name: CONFIG_SERVER_URL, value: "http://config-server:8888" }
+          readinessProbe: { httpGet: { path: /actuator/health/readiness, port: 8080 }, initialDelaySeconds: 20, periodSeconds: 5 }
+          livenessProbe:  { httpGet: { path: /actuator/health/liveness,  port: 8080 }, initialDelaySeconds: 40, periodSeconds: 10 }
+          resources: { requests: { cpu: 200m, memory: 384Mi }, limits: { cpu: "1", memory: 640Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: api-gateway, namespace: securebank }
+spec:
+  selector: { app: api-gateway }
+  ports: [{ port: 8080, targetPort: 8080 }]   # the Ingress targets THIS
+
+# --------------------------------------------------- discovery + config servers
+# On Kubernetes, Eureka is often RETIRED: Service DNS + kube-proxy already do
+# discovery/load-balancing. We keep it here for parity with the compose stack
+# (and because the course teaches it) — but notice how little k8s needs it.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: discovery-service, namespace: securebank }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: discovery-service } }
+  template:
+    metadata: { labels: { app: discovery-service } }
+    spec:
+      containers:
+        - name: discovery-service
+          image: registry.example.com/securebank/discovery-service:latest
+          ports: [{ containerPort: 8761 }]
+          readinessProbe: { httpGet: { path: /actuator/health, port: 8761 }, initialDelaySeconds: 20, periodSeconds: 5 }
+          resources: { requests: { cpu: 200m, memory: 384Mi }, limits: { cpu: 500m, memory: 640Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: discovery-service, namespace: securebank }
+spec:
+  selector: { app: discovery-service }
+  ports: [{ port: 8761, targetPort: 8761 }]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: config-server, namespace: securebank }
+spec:
+  replicas: 2     # config is READ at boot by everything: availability matters
+  selector: { matchLabels: { app: config-server } }
+  template:
+    metadata: { labels: { app: config-server } }
+    spec:
+      containers:
+        - name: config-server
+          image: registry.example.com/securebank/config-server:latest
+          ports: [{ containerPort: 8888 }]
+          env:
+            # In-cluster: config from a mounted Git-synced volume or the
+            # native folder baked into the image by CI.
+            - { name: CONFIG_REPO, value: "/config-repo" }
+          readinessProbe: { httpGet: { path: /actuator/health, port: 8888 }, initialDelaySeconds: 15, periodSeconds: 5 }
+          resources: { requests: { cpu: 200m, memory: 384Mi }, limits: { cpu: 500m, memory: 640Mi } }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: config-server, namespace: securebank }
+spec:
+  selector: { app: config-server }
+  ports: [{ port: 8888, targetPort: 8888 }]
