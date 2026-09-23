@@ -1,0 +1,141 @@
+/* ==========================================================================
+   SECUREBANK STYLES — plain CSS, no framework.
+   ==========================================================================
+   Week 1-2 lesson material: custom properties (design tokens), flex/grid
+   layout, and component-ish class naming. Deliberately simple — students
+   should be able to read every line and see WHY each page looks the way it
+   does. (The course later discusses Tailwind/CSS-in-JS trade-offs; plain CSS
+   keeps the focus on React, not on tooling.)
+
+   TOKENS: every color/spacing decision funnels through :root variables —
+   retheme the whole app by editing five lines. */
+
+:root {
+  --bg: #f4f6fb;
+  --surface: #ffffff;
+  --ink: #1c2333;
+  --muted: #6b7280;
+  --line: #e5e9f2;
+  --brand: #1d4ed8;
+  --brand-ink: #ffffff;
+  --danger: #b91c1c;
+  --danger-bg: #fee2e2;
+  --success: #15803d;
+  --success-bg: #dcfce7;
+  --warn: #92400e;
+  --warn-bg: #fef3c7;
+  --radius: 10px;
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+
+/* ---------- shell ---------- */
+.shell { min-height: 100vh; display: flex; flex-direction: column; }
+
+.topbar {
+  display: flex; align-items: center; gap: 24px;
+  padding: 10px 24px; background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  position: sticky; top: 0; z-index: 10;
+}
+.brand { font-weight: 700; font-size: 1.1rem; text-decoration: none; color: var(--ink); }
+.nav { display: flex; gap: 4px; flex: 1; }
+.nav a {
+  padding: 8px 14px; border-radius: 8px;
+  text-decoration: none; color: var(--muted); font-weight: 500;
+}
+.nav a:hover { background: var(--bg); color: var(--ink); }
+.nav a.active { background: var(--brand); color: var(--brand-ink); }
+.session { display: flex; align-items: center; gap: 12px; }
+.who { color: var(--muted); font-size: 0.9rem; }
+
+.content { flex: 1; width: 100%; max-width: 1000px; margin: 0 auto; padding: 28px 24px; }
+.footer { padding: 14px 24px; text-align: center; color: var(--muted); font-size: 0.8rem; border-top: 1px solid var(--line); }
+
+/* ---------- layout helpers ---------- */
+.stack { display: flex; flex-direction: column; gap: 20px; }
+.stack > .stack { gap: 12px; }
+.narrow { max-width: 520px; }
+.row { display: flex; gap: 12px; flex-wrap: wrap; }
+.row label { flex: 1; min-width: 160px; }
+.inline { display: flex; align-items: center; gap: 10px; }
+.right { text-align: right; }
+.muted { color: var(--muted); }
+h1 { margin: 0; }
+h2 { margin: 0 0 4px; }
+
+/* ---------- hero + cards ---------- */
+.hero {
+  display: flex; justify-content: space-between; align-items: center; gap: 16px;
+  background: linear-gradient(120deg, var(--brand), #3b82f6);
+  color: var(--brand-ink); border-radius: var(--radius); padding: 24px;
+}
+.hero h1 { color: inherit; }
+.total { font-size: 1.6rem; font-weight: 700; margin: 6px 0 0; }
+.cta {
+  background: var(--brand-ink); color: var(--brand);
+  padding: 10px 18px; border-radius: 8px; font-weight: 600; text-decoration: none;
+}
+
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; }
+.card {
+  background: var(--surface); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 18px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.card-title { font-weight: 600; }
+.card-value { font-size: 1.5rem; font-weight: 700; }
+.card a { color: var(--brand); font-size: 0.9rem; }
+
+/* ---------- forms ---------- */
+label { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; font-weight: 500; }
+.inline label { flex-direction: row; }
+input, select {
+  padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+  font-size: 1rem; background: var(--surface); color: var(--ink);
+}
+input:focus, select:focus { outline: 2px solid var(--brand); border-color: transparent; }
+
+button {
+  padding: 10px 18px; border-radius: 8px; border: none;
+  background: var(--brand); color: var(--brand-ink);
+  font-size: 1rem; font-weight: 600; cursor: pointer;
+}
+button:hover:not(:disabled) { filter: brightness(1.1); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+button.small { padding: 5px 10px; font-size: 0.8rem; }
+
+/* ---------- tables ---------- */
+table { width: 100%; border-collapse: collapse; background: var(--surface); border-radius: var(--radius); overflow: hidden; }
+th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); font-size: 0.92rem; }
+th { background: var(--bg); color: var(--muted); font-weight: 600; }
+tr:last-child td { border-bottom: none; }
+.pos { color: var(--success); }
+.neg { color: var(--danger); }
+
+/* ---------- feedback ---------- */
+.alert { background: var(--danger-bg); color: var(--danger); padding: 10px 14px; border-radius: 8px; }
+.success { background: var(--success-bg); color: var(--success); padding: 10px 14px; border-radius: 8px; }
+.warn { background: var(--warn-bg); color: var(--warn); padding: 10px 14px; border-radius: 8px; font-size: 0.9rem; }
+
+.badge { padding: 3px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; }
+.badge.applied { background: var(--warn-bg); color: var(--warn); }
+.badge.approved { background: var(--success-bg); color: var(--success); }
+.badge.rejected, .badge.paid_off { background: var(--danger-bg); color: var(--danger); }
+
+.pager { display: flex; align-items: center; gap: 14px; }
+
+/* ---------- login ---------- */
+.center-card {
+  max-width: 400px; margin: 10vh auto; background: var(--surface);
+  padding: 28px; border-radius: var(--radius); border: 1px solid var(--line);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.center-card .stack { margin-top: 8px; }
+
+code { background: var(--bg); padding: 1px 6px; border-radius: 6px; font-size: 0.85em; }
