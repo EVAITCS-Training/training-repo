@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.evaitcs.java8</groupId>
+    <artifactId>java8-features</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>06-collectors</artifactId>
+  <name>06 — Collectors: Where Streams Become Data Again</name>
+
+  <properties>
+    <!-- default target for `mvnw -pl 06-collectors compile exec:java` -->
+    <exec.mainClass>com.evaitcs.java8.collectors.CollectorsDemos</exec.mainClass>
+  </properties>
+</project>

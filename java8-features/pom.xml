@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.evaitcs.java8</groupId>
+  <artifactId>java8-features</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+
+  <name>Java 8 Features Teaching Repo</name>
+  <description>
+    Live-coding friendly tour of Java 8: lambdas, functional interfaces, default methods,
+    Optional, the Stream API (imperative vs declarative), Collectors, parallel streams,
+    java.time and collection API upgrades. Every module compiles with --release 8 so
+    NOTHING newer than Java 8 can sneak in.
+  </description>
+
+  <modules>
+    <module>01-lambdas</module>
+    <module>02-interface-evolution</module>
+    <module>03-optional</module>
+    <module>04-streams-fundamentals</module>
+    <module>05-streams-vs-oop</module>
+    <module>06-collectors</module>
+    <module>07-parallel-streams</module>
+    <module>08-java-time</module>
+    <module>09-api-upgrades</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- release=8 is the whole point: the compiler rejects any post-Java-8 API or syntax,
+         so every example here is guaranteed to be genuine Java 8. -->
+    <maven.compiler.release>8</maven.compiler.release>
+    <junit.version>5.10.2</junit.version>
+    <surefire.version>3.2.5</surefire.version>
+    <compiler.plugin.version>3.13.0</compiler.plugin.version>
+    <exec.plugin.version>3.2.0</exec.plugin.version>
+  </properties>
+
+  <dependencies>
+    <!-- JUnit 5 for every module: tests are part of the teaching material.
+         Each test prints what it proves, so `mvnw test` doubles as a live demo. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${compiler.plugin.version}</version>
+          <configuration>
+            <compilerArgs>
+              <!-- JDK 25 warns that "source 8 is obsolete"; that warning is noise in class. -->
+              <arg>-Xlint:-options</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefire.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>${exec.plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <!-- `mvnw -pl <module> compile exec:java` runs the module's demo launcher.
+           Each module pom sets its own default exec.mainClass. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>
