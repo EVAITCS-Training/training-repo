@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  2004: THIS was the wiring. Every object the application needed, described in XML —
+  class by fully-qualified name, dependencies by id reference, values as strings.
+  It worked, and it was a genuine revolution (no JNDI, no EJB, no vendor server);
+  it was also invisible to the compiler. A typo in a class name or an id compiled
+  perfectly and exploded at STARTUP — which, to be fair to the era, was already better
+  than the ServiceLocator's 2 a.m. runtime explosion (module 01).
+
+  XmlEraDemo loads this file and prints the beans; AppConfig builds the SAME graph as
+  Java. Compare, line by element:
+    <bean id="dataSource" class="...DriverManagerDataSource">   ==  @Bean DataSource dataSource(...)
+    <constructor-arg ref="dataSource"/>                         ==  the @Bean method PARAMETER
+    <property name="url" value="${db.url}"/>                    ==  @Value("${db.url}")
+
+  The ${db.url} placeholder is NOT resolved by magic: PropertySourcesPlaceholderConfigurer
+  (the first bean below) is the post-processor that does it, reading the Environment that
+  SpringApp fills before refresh(). The annotation context resolves @Value against the
+  Environment by DEFAULT — one less bean to remember. That is the kind of ceremony the
+  2007-2009 annotation era kept deleting until Boot (stage-2) deleted the file itself.
+-->
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+           https://www.springframework.org/schema/beans/spring-beans.xsd">
+
+  <!-- Resolves ${db.url} from the Environment (SpringApp adds the property source). -->
+  <bean class="org.springframework.context.support.PropertySourcesPlaceholderConfigurer"/>
+
+  <!-- The datasource+dao graph — the SAME two beans AppConfig declares as @Bean methods.
+       (The full graph needs no more: the service/aspect/listener beans are the annotation
+       era's additions, shown where they belong — in AppConfig.) -->
+  <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+    <property name="driverClassName" value="org.h2.Driver"/>
+    <property name="url" value="${db.url}"/>
+  </bean>
+
+  <bean id="transferRepository" class="com.evaitcs.evolution.spring.JdbcTransferRepository">
+    <constructor-arg ref="dataSource"/>
+  </bean>
+</beans>

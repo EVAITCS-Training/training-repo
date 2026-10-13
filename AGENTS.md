@@ -14,6 +14,7 @@ always run commands from inside the stage folder.
 | `collections-framework` | Plain Java 8, classic idiom (Maven multi-module, 10 topic modules incl. concurrency deep-dive) | `.\mvnw.cmd test`; per module: `.\mvnw.cmd -pl <module> test` or `... compile exec:java` |
 | `java8-features` | Plain Java 8 (Maven multi-module, 9 topic modules) | `.\mvnw.cmd test`; per module: `.\mvnw.cmd -pl <module> test` or `... compile exec:java` |
 | `advanced-java` | Java 21, modern idiom (Maven multi-module, 12 topic modules: erasure → reflection/annotations → JMM/locks/executors → GC → IO/NIO → patterns incl. beyond-GoF → exceptions → JDBC/PostgreSQL) | `.\mvnw.cmd test`; per module: `.\mvnw.cmd -pl <module> test` or `... compile exec:java` |
+| `j2ee-to-spring` | Java 21, real framework stack: embedded Tomcat 11, Hibernate 7, Spring Framework 7 (Boot-4 era), Jackson 3 `tools.jackson`; H2 in-memory (stage-1 schema) — zero setup (Maven multi-module, 4 era modules + capstone app) | `.\mvnw.cmd test`; per module: `.\mvnw.cmd -pl <module> test` or `... compile exec:java` |
 | `infra` | K8s YAML, Terraform | `terraform fmt -check` / `terraform validate` (if installed) |
 
 Conventions:
@@ -29,7 +30,7 @@ Conventions:
   "In one sentence:" takeaways. Apply it when writing or editing any module README/demo/test.
 - `core-java` teaches the CLASSIC (pre-lambda) idiom on purpose — anonymous inner classes,
   explicit loops — with forward pointers into `java8-features`. Course order: core-java →
-  collections-framework → java8-features → advanced-java → stage-2.
+  collections-framework → java8-features → advanced-java → j2ee-to-spring → stage-2.
 - `collections-framework` follows the same rules as `core-java` (release 8, classic idiom,
   per-module domain duplication, mermaid-first READMEs). Concurrency demos/tests must stay
   DETERMINISTIC: CountDownLatch start guns + join, scripted interleavings for compound-action
@@ -44,6 +45,13 @@ Conventions:
   so `.\mvnw.cmd test` stays green without Docker. It is strictly NON-DESTRUCTIVE — writes run
   in rolled-back transactions or session temp tables, never mutating stage-1 seed data.
   Connection overrides: `JDBC_URL`/`JDBC_USER`/`JDBC_PASSWORD` (default localhost:5432/securebank).
+- `j2ee-to-spring` versions mirror stage-2's stack (Spring Framework 7.0.x via BOM, Tomcat
+  11, Hibernate 7, Jackson 3 `tools.jackson.*` coordinates — annotations keep the old
+  `com.fasterxml.jackson.annotation` package; see `docs/refs/BOOT4_CHEATSHEET.md` §C). The
+  DB is H2 in-memory recreating stage-1's schema+seed, fresh per demo/test — zero setup,
+  no Docker. Embedded servers bind EPHEMERAL ports (port 0) and are stopped inside every
+  demo/test; nothing lingers. Module 04's embedded-Tomcat + DispatcherServlet wiring needs
+  the `setParentClassLoader` line under `exec:java` (documented trap — Boot hides it).
 - `java8-features` compiles with `--release 8`: no records/var/post-Java-8 APIs there;
   domain classes are duplicated per module on purpose. Each module README leads with
   mermaid diagrams (concept first, then code).

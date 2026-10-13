@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.evaitcs.evolution</groupId>
+  <artifactId>j2ee-to-spring</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+
+  <name>J2EE to Spring — The Evolution Teaching Repo</name>
+  <description>
+    The story between raw JDBC (advanced-java/12) and Spring Boot (stage-2): the J2EE era
+    of servlets, deployment descriptors and EJB ceremony; Hibernate and the ORM idea; the
+    Spring Framework's IoC container, AOP and declarative transactions; and a capstone app
+    that builds the SAME bank transfer three ways — raw servlet + JDBC, servlet + Hibernate,
+    and hand-wired Spring MVC on embedded Tomcat — so every piece of plumbing Boot later
+    automates is visible by hand at least once. Java 21, H2 in-memory database: zero setup,
+    everything runs anywhere. Explanations follow ../docs/refs/TEACHING_STYLE.md.
+  </description>
+
+  <modules>
+    <module>01-j2ee-the-world-before-spring</module>
+    <module>02-hibernate-orm</module>
+    <module>03-spring-framework-core</module>
+    <module>04-the-evolution-app</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- Java 21: the level stage-2 runs on. The EVOLUTION is the subject, not the Java
+         level — so era-accurate ceremony (verbose JDBC, XML config) is reproduced with
+         modern language features around it. -->
+    <maven.compiler.release>21</maven.compiler.release>
+
+    <!-- Pinned to the stack stage-2-monolith actually runs: Boot 4.1.1 sits on
+         Spring Framework 7.0.x / Tomcat 11 / Hibernate 7 / Jackson 3 (tools.jackson).
+         Verified against Maven Central; keep major versions in sync with stage-2. -->
+    <spring.version>7.0.9</spring.version>
+    <tomcat.version>11.0.27</tomcat.version>
+    <hibernate.version>7.4.13.Final</hibernate.version>
+    <h2.version>2.5.252</h2.version>
+    <jackson.version>3.0.4</jackson.version>
+    <aspectj.version>1.9.25.1</aspectj.version>
+    <jakarta.annotation.version>3.0.0</jakarta.annotation.version>
+
+    <junit.version>5.10.2</junit.version>
+    <surefire.version>3.2.5</surefire.version>
+    <compiler.plugin.version>3.13.0</compiler.plugin.version>
+    <exec.plugin.version>3.2.0</exec.plugin.version>
+  </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <!-- The Spring BOM aligns every org.springframework artifact to one version,
+           exactly like spring-boot-dependencies does in stage-2 (minus the Boot magic). -->
+      <dependency>
+        <groupId>org.springframework</groupId>
+        <artifactId>spring-framework-bom</artifactId>
+        <version>${spring.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.tomcat.embed</groupId>
+        <artifactId>tomcat-embed-core</artifactId>
+        <version>${tomcat.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.hibernate.orm</groupId>
+        <artifactId>hibernate-core</artifactId>
+        <version>${hibernate.version}</version>
+      </dependency>
+      <!-- Jackson 3: the coordinates MOVED from com.fasterxml.jackson.core to
+           tools.jackson.core (annotations keep the old package). See
+           ../docs/refs/BOOT4_CHEATSHEET.md section C. -->
+      <dependency>
+        <groupId>tools.jackson.core</groupId>
+        <artifactId>jackson-databind</artifactId>
+        <version>${jackson.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.aspectj</groupId>
+        <artifactId>aspectjweaver</artifactId>
+        <version>${aspectj.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>jakarta.annotation</groupId>
+        <artifactId>jakarta.annotation-api</artifactId>
+        <version>${jakarta.annotation.version}</version>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
+
+  <dependencies>
+    <!-- Tests are part of the teaching material: each one proves a claim made in the
+         demos/README and prints its evidence, so `mvnw test` doubles as a live show. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- H2 is shared infrastructure here, not a per-module subject: every module boots
+         the same SecureBank schema in memory so all four eras run against identical data. -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>${h2.version}</version>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${compiler.plugin.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefire.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>${exec.plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <!-- `mvnw -pl <module> compile exec:java` runs the module's demo launcher -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

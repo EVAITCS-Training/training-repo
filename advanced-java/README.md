@@ -138,7 +138,8 @@ If em-dashes/arrows print as garbage in a plain `cmd` window, run `chcp 65001` f
 ```mermaid
 flowchart LR
     J8["java8-features<br/>lambdas · streams"] --> A["advanced-java<br/>(this repo)"]
-    A --> S["stage-2-monolith<br/>Spring Boot on Java 21"]
+    A --> J2S["j2ee-to-spring<br/>servlets · Hibernate ·<br/>hand-wired Spring MVC"]
+    J2S --> S["stage-2-monolith<br/>Spring Boot on Java 21"]
     S --> M["stage-5-microservices<br/>the patterns module 10 named,<br/>running for real"]
 
     style A fill:#4a90d9,color:#fff
@@ -150,5 +151,7 @@ flowchart LR
 `@ControllerAdvice` turns into RFC 7807 responses; **12 is the raw JDBC that Spring Data
 JPA / Hibernate wrap — after it, `@Query` and repositories are no longer magic**; and
 09–10 name the patterns `stage-2` and `stage-5` are written in (Repository, Service Layer,
-DTO, ProblemDetail, saga, circuit breaker, gateway). When students reach Spring, nothing
-is magic anymore — that is the whole point of the course.
+DTO, ProblemDetail, saga, circuit breaker, gateway). The next repo, `j2ee-to-spring`,
+acts the history out: module 12's JDBC grows a servlet, then Hibernate, then a
+hand-wired Spring MVC app — the exact plumbing Boot deletes. When students reach Spring,
+nothing is magic anymore — that is the whole point of the course.

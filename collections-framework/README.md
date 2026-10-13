@@ -125,7 +125,8 @@ flowchart LR
     CJ["core-java<br/>equals/hashCode ·<br/>Comparable/Comparator"] --> C["collections-framework<br/>(this repo)"]
     C --> J8["java8-features<br/>lambdas · streams ·<br/>Collectors"]
     J8 --> AJ["advanced-java<br/>erasure · reflection · JMM ·<br/>GC · NIO · patterns"]
-    AJ --> S["stage-2-monolith<br/>Spring Boot"]
+    AJ --> J2S["j2ee-to-spring<br/>servlets · Hibernate ·<br/>Spring without Boot"]
+    J2S --> S["stage-2-monolith<br/>Spring Boot"]
 
     style C fill:#4a90d9,color:#fff
 ```
@@ -133,7 +134,8 @@ flowchart LR
 **Read the diagram:** left to right, one arrow per course. `core-java` builds the contracts,
 this course (blue) puts them to work, `java8-features` deletes the ceremony with lambdas
 and streams, `advanced-java` opens the machine underneath (the JVM, the memory model, the
-reflection that frameworks run on), and `stage-2-monolith` ships it all as a Spring Boot app.
+reflection that frameworks run on), `j2ee-to-spring` tells the servlet→Hibernate→Spring
+story that ends at Boot's doorstep, and `stage-2-monolith` ships it all as a Spring Boot app.
 
 Every "classic vs modern" note here is a hook for the next course: the explicit `Iterator`
 loop in module 03 becomes `list.removeIf(...)` and `forEach` in `java8-features/01-lambdas`;

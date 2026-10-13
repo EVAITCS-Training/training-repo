@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.evaitcs.evolution</groupId>
+    <artifactId>j2ee-to-spring</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>02-hibernate-orm</artifactId>
+  <name>02 — Hibernate &amp; the ORM Idea</name>
+
+  <dependencies>
+    <!-- Hibernate ORM 7: the object-relational mapper that killed hand-written row
+         mapping (module 01's rs.getBigDecimal("balance")) and then won so completely
+         that J2EE standardized it as JPA. Version managed by the parent — the same
+         major stage-2-monolith runs. -->
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-core</artifactId>
+    </dependency>
+    <!-- H2 comes from the parent: the in-memory stand-in for stage-1's PostgreSQL.
+         Bootstrapping the SessionFactory on H2 is fast, so every TEST METHOD gets a
+         fresh database AND a fresh factory (determinism, house rule). -->
+  </dependencies>
+
+  <properties>
+    <!-- default target for `mvnw -pl 02-hibernate-orm compile exec:java` -->
+    <exec.mainClass>com.evaitcs.evolution.hibernate.HibernateDemos</exec.mainClass>
+  </properties>
+</project>

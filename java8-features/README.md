@@ -128,12 +128,14 @@ streams, collectors, `Optional`, `java.time` — is what that one change buys yo
 ```mermaid
 flowchart LR
     J8["java8-features<br/>(this repo)"] --> AJ["advanced-java<br/>erasure · reflection · JMM ·<br/>GC · NIO · patterns"]
-    AJ --> S["stage-2-monolith<br/>Spring Boot on Java 21"]
+    AJ --> J2S["j2ee-to-spring<br/>servlets · Hibernate ·<br/>Spring without Boot"]
+    J2S --> S["stage-2-monolith<br/>Spring Boot on Java 21"]
 
     style J8 fill:#4a90d9,color:#fff
 ```
 
 **Read the diagram:** this course teaches the language level; `advanced-java` (Java 21) then
 opens the machine underneath — what erasure really deletes, how reflection and annotations
-power Spring, what the memory model promises your threads, and the patterns large systems
-are built from — and `stage-2-monolith` runs all of it for real.
+power Spring, what the memory model promises your threads — `j2ee-to-spring` acts out the
+servlet → Hibernate → Spring evolution and hand-wires the very app Boot automates, and
+`stage-2-monolith` runs all of it for real.

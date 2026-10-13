@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.evaitcs.evolution</groupId>
+    <artifactId>j2ee-to-spring</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>04-the-evolution-app</artifactId>
+  <name>04 — The Evolution App: One Transfer, Three Eras, One Server</name>
+
+  <!-- THE CAPSTONE'S DEPENDENCY LIST IS THE LESSON. Every jar below is something
+       stage-2 gets from ONE starter (spring-boot-starter-webmvc) plus
+       spring-boot-starter-data-jpa; here each capability is a separate, hand-wired
+       dependency. No Boot anywhere — on purpose: every piece of plumbing Boot later
+       automates is visible below and wired by hand in src/main/java. Versions all
+       come from the parent's BOM/dependencyManagement (the same aligned stack
+       stage-2 runs). -->
+  <dependencies>
+    <!-- Era 1 + era 2 + the server itself: embedded Tomcat 11 (Servlet 6.1, jakarta.*).
+         In 2001 this was a vendor server you deployed a WAR into; here it is a jar
+         that EvolutionServer starts on an ephemeral port. -->
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-core</artifactId>
+    </dependency>
+    <!-- Era 2: standalone Hibernate — entities replace module 01's hand row-mapping,
+         but the SessionFactory bootstrap and per-request Session/transaction
+         plumbing stay hand-cranked (that is era 3's deletion list). -->
+    <dependency>
+      <groupId>org.hibernate.orm</groupId>
+      <artifactId>hibernate-core</artifactId>
+    </dependency>
+    <!-- Era 3: Spring MVC without Boot. spring-webmvc brings DispatcherServlet,
+         @RestController, @RestControllerAdvice and ProblemDetail support;
+         spring-context is the IoC container module 03 built by hand. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-webmvc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+    <!-- JdbcTemplate + DriverManagerDataSource (era 3's repository layer). -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-jdbc</artifactId>
+    </dependency>
+    <!-- @Transactional + DataSourceTransactionManager (module 03's proxy machinery). -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-tx</artifactId>
+    </dependency>
+    <!-- Jackson 3 — coordinates MOVED to tools.jackson.core (annotations keep the
+         old com.fasterxml.jackson.annotation package; see BOOT4_CHEATSHEET section C).
+         spring-webmvc 7 detects tools.jackson.databind.ObjectMapper on the classpath
+         and auto-registers its JacksonJsonHttpMessageConverter under @EnableWebMvc
+         (verified empirically in this module — no manual converter registration). -->
+    <dependency>
+      <groupId>tools.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+    </dependency>
+    <!-- @PostConstruct/@PreDestroy and friends — Spring's lifecycle callbacks read
+         these annotations, which left the JDK in Java 11 (same reason module 03 has it). -->
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+    </dependency>
+    <!-- H2 + JUnit come from the parent: shared infrastructure, not this module's subject. -->
+  </dependencies>
+
+  <properties>
+    <!-- default target for `mvnw -pl 04-the-evolution-app compile exec:java` -->
+    <exec.mainClass>com.evaitcs.evolution.app.EvolutionDemos</exec.mainClass>
+  </properties>
+</project>

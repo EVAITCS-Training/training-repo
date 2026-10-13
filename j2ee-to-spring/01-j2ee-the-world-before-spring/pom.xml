@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.evaitcs.evolution</groupId>
+    <artifactId>j2ee-to-spring</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>01-j2ee-the-world-before-spring</artifactId>
+  <name>01 — J2EE: The World Before Spring</name>
+
+  <dependencies>
+    <!-- Embedded Tomcat 11 = the servlet container (Jakarta Servlet 6.1 API included).
+         In 2001 this was a vendor server you deployed a WAR into; today it is a jar
+         we start on an ephemeral port — but the servlet code is written exactly as
+         it was then. That contrast is the module. -->
+    <dependency>
+      <groupId>org.apache.tomcat.embed</groupId>
+      <artifactId>tomcat-embed-core</artifactId>
+    </dependency>
+    <!-- H2 comes from the parent: the in-memory stand-in for stage-1's PostgreSQL. -->
+  </dependencies>
+
+  <properties>
+    <!-- default target for `mvnw -pl 01-j2ee-the-world-before-spring compile exec:java` -->
+    <exec.mainClass>com.evaitcs.evolution.j2ee.J2eeDemos</exec.mainClass>
+  </properties>
+</project>

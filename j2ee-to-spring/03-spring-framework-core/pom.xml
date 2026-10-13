@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.evaitcs.evolution</groupId>
+    <artifactId>j2ee-to-spring</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>03-spring-framework-core</artifactId>
+  <name>03 — Spring Framework Core: The Container That Ends the Ceremony</name>
+
+  <!-- No Boot here ON PURPOSE: this module wires by hand every bean that stage-2's
+       starters will later choose for us. Every version comes from the parent's
+       spring-framework-bom / dependencyManagement — declaring one here would break
+       the "one aligned stack" rule the BOM exists to enforce. -->
+  <dependencies>
+    <!-- The IoC container itself: AnnotationConfigApplicationContext, @Configuration,
+         @Bean, events, @EventListener. (2004: this was spring.jar, one download.) -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context</artifactId>
+    </dependency>
+    <!-- JdbcTemplate + the DataAccessException hierarchy + DriverManagerDataSource:
+         the JDBC helper Rod Johnson's book argued for (advanced-java/12 without the boilerplate). -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-jdbc</artifactId>
+    </dependency>
+    <!-- @Transactional, the transaction manager, and the proxy infrastructure behind it. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-tx</artifactId>
+    </dependency>
+    <!-- Spring's AOP module: proxies, advisors, AopUtils — advanced-java/02's dynamic
+         proxies, grown into a framework. -->
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-aop</artifactId>
+    </dependency>
+    <!-- AspectJ's ANNOTATIONS + pointcut parser only (no ajc compiler, no load-time
+         weaving): @Aspect/@Around/@Before are read by Spring, which weaves with its
+         own runtime proxies. -->
+    <dependency>
+      <groupId>org.aspectj</groupId>
+      <artifactId>aspectjweaver</artifactId>
+    </dependency>
+    <!-- @PostConstruct/@PreDestroy live here since Java EE moved them out of the JDK
+         (Java 11). jakarta.* namespace — the same split module 01's servlets use. -->
+    <dependency>
+      <groupId>jakarta.annotation</groupId>
+      <artifactId>jakarta.annotation-api</artifactId>
+    </dependency>
+    <!-- H2 + JUnit come from the parent: shared infrastructure, not this module's subject. -->
+  </dependencies>
+
+  <properties>
+    <!-- default target for `mvnw -pl 03-spring-framework-core compile exec:java` -->
+    <exec.mainClass>com.evaitcs.evolution.spring.SpringCoreDemos</exec.mainClass>
+  </properties>
+</project>

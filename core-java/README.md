@@ -111,14 +111,15 @@ flowchart LR
     C["core-java<br/>(this repo)"] --> CF["collections-framework<br/>List · Set · Map · Queue ·<br/>fail-fast · java.util.concurrent"]
     CF --> J8["java8-features<br/>lambdas · streams · Optional ·<br/>java.time"]
     J8 --> AJ["advanced-java<br/>erasure · reflection · JMM ·<br/>GC · NIO · patterns"]
-    AJ --> S["stage-2-monolith<br/>Spring Boot"]
+    AJ --> J2S["j2ee-to-spring<br/>servlets · Hibernate ·<br/>Spring without Boot"]
+    J2S --> S["stage-2-monolith<br/>Spring Boot"]
 
     style C fill:#4a90d9,color:#fff
 ```
 
 **Read the diagram:** left to right, each arrow means "the next course assumes this one":
-core-java → collections-framework → java8-features → advanced-java → the stage-2 Spring
-Boot monolith.
+core-java → collections-framework → java8-features → advanced-java → j2ee-to-spring →
+the stage-2 Spring Boot monolith.
 
 Every "classic vs modern" note in this repo is a hook for the next course: the anonymous
 `Comparator` in module 10 becomes `Comparator.comparing(Account::getBalance)` in
