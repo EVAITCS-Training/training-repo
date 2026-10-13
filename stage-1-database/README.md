@@ -56,6 +56,11 @@ reconciliation query in `queries/03`.
 
 ## How this stage connects forward
 
+- **advanced-java / 12-jdbc** (course module): reads these exact tables through RAW JDBC —
+  `PreparedStatement` (the SQL-injection fix), `ResultSet` cursors, and transactions. It is
+  the layer stage-2's Spring Data JPA hides. It needs this stage's Postgres up (`docker
+  compose up -d`), degrades gracefully (tests skip, demos print a hint) when it is down, and
+  is non-destructive (writes run in rolled-back transactions or temp tables).
 - **Stage 2** (`stage-2-monolith`): each table becomes an `@Entity`
   (`customer` → `Customer.java`, ...). Boot's `postgres` profile points at
   this compose database with `ddl-auto: validate` — entity and table must agree

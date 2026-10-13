@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.evaitcs.advanced</groupId>
+    <artifactId>advanced-java</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>12-jdbc</artifactId>
+  <name>12 — JDBC: Talking to PostgreSQL Without the Magic</name>
+
+  <properties>
+    <!-- default target for `mvnw -pl 12-jdbc compile exec:java` -->
+    <exec.mainClass>com.evaitcs.advanced.jdbc.JdbcDemos</exec.mainClass>
+  </properties>
+
+  <dependencies>
+    <!-- The ONE third-party dependency in the whole course repo: the PostgreSQL JDBC
+         driver. runtime scope on purpose — our code compiles against java.sql (part of
+         the JDK) and the driver is discovered at runtime via ServiceLoader, exactly the
+         mechanism ConnectionDemo shows. Keeping it HERE (not in the parent's shared
+         <dependencies>) means no other module pays for it. -->
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <version>42.7.4</version>
+      <scope>runtime</scope>
+    </dependency>
+  </dependencies>
+</project>
