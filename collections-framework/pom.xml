@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <groupId>com.evaitcs.collections</groupId>
+  <artifactId>collections-framework</artifactId>
+  <version>1.0.0</version>
+  <packaging>pom</packaging>
+
+  <name>Collections Framework Teaching Repo</name>
+  <description>
+    The course between core-java and java8-features: the java.util Collections Framework.
+    Why arrays hit a wall and what the interface hierarchy promises; List (ArrayList vs
+    LinkedList); iteration and the Iterator contract; Set and the equals/hashCode harvest;
+    Map and how HashMap actually finds your value; Queue and Deque; sorting and the
+    Collections utility class; choosing the right collection with a Big-O cheat sheet;
+    thread safety, fail-fast iterators and ConcurrentModificationException; and a deep dive
+    into java.util.concurrent collections. Everything compiles with --release 8 and teaches
+    the CLASSIC (pre-lambda) idiom, with forward pointers into ../java8-features.
+  </description>
+
+  <modules>
+    <module>01-why-collections</module>
+    <module>02-list</module>
+    <module>03-iteration-and-iterators</module>
+    <module>04-set</module>
+    <module>05-map</module>
+    <module>06-queue-and-deque</module>
+    <module>07-sorting-and-collections-utility</module>
+    <module>08-choosing-the-right-collection</module>
+    <module>09-thread-safety-and-fail-fast</module>
+    <module>10-java-util-concurrent</module>
+  </modules>
+
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <!-- release=8 keeps the whole course on one stable language level; the CLASSIC idiom
+         (anonymous inner classes, explicit loops, raw iteration) is taught on purpose —
+         lambdas and streams over these very collections are the payoff waiting in the
+         java8-features course. -->
+    <maven.compiler.release>8</maven.compiler.release>
+    <junit.version>5.10.2</junit.version>
+    <surefire.version>3.2.5</surefire.version>
+    <compiler.plugin.version>3.13.0</compiler.plugin.version>
+    <exec.plugin.version>3.2.0</exec.plugin.version>
+  </properties>
+
+  <dependencies>
+    <!-- Tests are part of the teaching material: each one proves a claim made in the
+         demos/README and prints its evidence, so `mvnw test` doubles as a live show. -->
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter</artifactId>
+      <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-compiler-plugin</artifactId>
+          <version>${compiler.plugin.version}</version>
+          <configuration>
+            <compilerArgs>
+              <!-- modern JDKs warn that "source 8 is obsolete"; that warning is noise in class -->
+              <arg>-Xlint:-options</arg>
+            </compilerArgs>
+          </configuration>
+        </plugin>
+        <plugin>
+          <groupId>org.apache.maven.plugins</groupId>
+          <artifactId>maven-surefire-plugin</artifactId>
+          <version>${surefire.version}</version>
+        </plugin>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>exec-maven-plugin</artifactId>
+          <version>${exec.plugin.version}</version>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <!-- `mvnw -pl <module> compile exec:java` runs the module's demo launcher -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>exec-maven-plugin</artifactId>
+      </plugin>
+    </plugins>
+  </build>
+</project>

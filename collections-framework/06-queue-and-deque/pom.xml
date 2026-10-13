@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>com.evaitcs.collections</groupId>
+    <artifactId>collections-framework</artifactId>
+    <version>1.0.0</version>
+  </parent>
+
+  <artifactId>06-queue-and-deque</artifactId>
+  <name>06 — Queue &amp; Deque: Lines, Heaps, and Two-Ended Things</name>
+
+  <properties>
+    <!-- default target for `mvnw -pl 06-queue-and-deque compile exec:java` -->
+    <exec.mainClass>com.evaitcs.collections.queues.QueueDemos</exec.mainClass>
+  </properties>
+</project>
