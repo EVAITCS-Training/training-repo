@@ -13,8 +13,8 @@ package com.evaitcs.evolution.j2ee;
  * scrollable file. In 2001 each block was its own .java/.xml file, and the vendor
  * server generated a THIRD class (the container's EJBObject stub) at deploy time.
  */
-public class TheCeremonyDemo {
 
+public class TheCeremonyDemo {
     // Exhibit A: the "home" interface — a factory contract the container implements FOR you.
     static final String HOME_INTERFACE = """
             public interface TransferHome extends EJBHome {
